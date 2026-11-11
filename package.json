@@ -1,0 +1,1 @@
+{ "name": "wrap-up", "private": true, "version": "2.0.0", "scripts": { "test": "node tests/lib.test.mjs && node tests/ui.test.mjs", "check": "node check.mjs", "dev": "python3 -m http.server 8080" } }
