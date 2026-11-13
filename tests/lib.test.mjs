@@ -64,12 +64,12 @@ r = await L.extract([file("watch-history.json", JSON.stringify(wh)), file("watch
 ok(r.watches.length === 6 && r.subs === 2, "dedupe across files: " + r.watches.length);
 
 /* problems */
-r = await L.extract([file("watch-history.html", "<html>")]); ok(/JSON/.test(r.problems.join()), "html hint");
+r = await L.extract([file("watch-history.html", "<html>")]); ok(r.problems.length === 1, "html with no entries is a problem");
 r = await L.extract([file("photo.png", "x")]); ok(/isn't a/.test(r.problems.join()), "unsupported type");
 r = await L.extract([file("empty.json", "[]")]); ok(r.problems.length === 1, "empty json");
 r = await L.extract([file("bad.json", "{not json")]); ok(r.problems.length === 1, "malformed json must not throw");
 let threw = ""; try { await L.extract([file("x.zip", Buffer.from("not a zip at all"))]); } catch (e) { threw = e.message; } ok(/valid \.zip/.test(threw), "invalid zip message: " + threw);
-const htmlZip = makeZip([["Takeout/YouTube/history/watch-history.html", "<html></html>"]]); r = await L.extract([file("t.zip", htmlZip)]); ok(/HTML/.test(r.problems.join()), "html-in-zip hint");
+const htmlZip = makeZip([["Takeout/YouTube/history/watch-history.html", "<html></html>"]]); r = await L.extract([file("t.zip", htmlZip)]); ok(r.problems.length === 1, "html-in-zip without entries is a problem");
 
 /* summaries */
 const demo = L.demoWatches(); ok(demo.length > 5000, "demo size");
@@ -96,11 +96,11 @@ const c = L.cleanSummary(evil);
 ok(c && c.uniqueVideos === 0 && c.topChannels.length === 1 && c.topChannels[0][0].length <= 120 && c.topChannels[0][1] <= 1e9, "cleanSummary clamps strings/numbers");
 ok(c.topics.length === 0 && c.heat.length === 7 && c.heat[0].length === 24 && c.series.labels.length === 0 && c.busiest === null && c.nightPct === 100 && c.first.title.length <= 200 && c.year === "all", "cleanSummary shape: " + JSON.stringify(c.year));
 ok(L.cleanSummary(null) === null && L.cleanSummary({ count: 0 }) === null && L.cleanSummary("x") === null, "cleanSummary rejects junk");
-ok(L.cleanStore({ sums: { by: { all: { count: 3 }, "2024": { count: 2 }, evil: { count: 9 } } }, subs: "12" }).sums.years.join() === "2024", "cleanStore filters keys");
+ok(L.cleanStore({ sums: { by: { all: { count: 3 }, "2024": { count: 2 }, evil: { count: 9 } } }, subs: "12" }).data.watch.years.join() === "2024", "cleanStore filters keys");
 ok(L.cleanStore({ sums: { by: { "2024": { count: 2 } } } }) === null && L.cleanStore("x") === null, "cleanStore requires all");
 
 /* share links */
-const code = await L.encodeShare(Y, 42);
+const code = await L.encodeShare(Y, "watch", 42);
 ok(/^[A-Za-z0-9_-]+$/.test(code) && code.length < 6000, "share code size: " + code.length);
 const back = await L.decodeShare(code);
 ok(back.summary.count === Y.count && back.subs === 42 && back.summary.topVideos.length === 0 && back.summary.first.title === "", "share payload must drop video titles");
@@ -114,4 +114,34 @@ const hostile = zlib.deflateRawSync(Buffer.from(JSON.stringify({ v: 1, s: evil }
 /* estimates */
 ok(Math.abs(L.lnCdf(100, 100, 1) - .5) < 1e-3 && L.lnCdf(0, 100, 1) === 0 && L.lnCdf(1e9, 100, 1) > .999, "lnCdf");
 
+/* ---------- real-format HTML (synthetic entries shaped like a Takeout export) ---------- */
+{
+  const cell = (inner, cap) => `<div class="outer-cell mdl-cell"><div class="mdl-grid"><div class="header-cell mdl-cell mdl-cell--12-col"><p class="mdl-typography--title">YouTube<br></p></div><div class="content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1">${inner}</div><div class="content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1 mdl-typography--text-right"></div><div class="content-cell mdl-cell mdl-cell--12-col mdl-typography--caption">${cap}</div></div></div>`;
+  const ad = "<b>Products:</b><br>&emsp;YouTube<br><b>Details:</b><br>&emsp;From Google Ads<br>";
+  const plain = "<b>Products:</b><br>&emsp;YouTube<br>";
+  const html = "<html><body>" +
+    cell('Watched\u00a0<a href="https://www.youtube.com/watch?v=AAAAAAAAAAA">Real &amp; Good Video</a><br><a href="https://www.youtube.com/channel/UCxxxxxxxxxxxxxxxxxxxxxx">Some Channel</a><br>Mar 3, 2026, 11:45:10\u202fPM WET<br>', plain) +
+    cell('Watched\u00a0<a href="https://www.youtube.com/watch?v=BBBBBBBBBBB">An Ad</a><br>Watched at 12:31\u202fAM<br>Nov 11, 2026, 12:31:27\u202fAM WET<br>', ad) +
+    cell('Searched for\u00a0<a href="https://www.youtube.com/results?search_query=lofi+beats">lofi beats</a><br>Nov 10, 2026, 11:11:35\u202fPM WET<br>', plain) +
+    cell('Searched for\u00a0<a href="https://www.youtube.com/results?search_query=Rust+ownership">Rust ownership</a><br>12 Nov 2026, 09:05:00 UTC<br>', plain) +
+    "</body></html>";
+  const h = L.parseActivityHtml(html);
+  ok(h.watches.length === 1 && h.ads === 1 && h.searches.length === 2, "html: 1 watch, 1 ad skipped, 2 searches");
+  ok(h.watches[0].title === "Real & Good Video" && h.watches[0].ch === "Some Channel", "html: title/channel decoded");
+  const w = new Date(h.watches[0].t); ok(w.getUTCHours() === 23 && w.getUTCDate() === 3 && w.getUTCMonth() === 2, "html: wall-clock time kept (11:45 PM)");
+  const sr = h.searches.find(x => x.title === "lofi beats"); ok(sr && new Date(sr.t).getUTCHours() === 23 && sr.words.includes("lofi"), "html: search parsed, 11:11 PM");
+  ok(new Date(h.searches.find(x => x.title === "Rust ownership").t).getUTCHours() === 9, "html: 24h format");
+  ok(L.parseActivityDate("Nov 11, 2026, 12:31:27\u202fAM WET") === Date.UTC(2026, 10, 11, 0, 31, 27), "12 AM is hour 0");
+  ok(L.parseActivityDate("nonsense") === null, "bad date is null");
+  const hz = makeZip([["Takeout/YouTube and YouTube Music/history/search-history.html", html], ["Takeout/YouTube and YouTube Music/subscriptions/subscriptions.csv", subsCsv]]);
+  const rz = await L.extract([file("takeout-1.zip", hz)]);
+  ok(rz.watches.length === 1 && rz.searches.length === 2 && rz.subs != null && rz.notes.length >= 1, "zip with HTML history extracts watches, searches, subs, ad note");
+  const onlyS = await L.extract([file("search-history.html", html.replace(/<div class="outer-cell[^]*?Some Channel[^]*?<\/div><\/div><\/div>/, ""))]);
+  ok(onlyS.searches.length === 2 && !onlyS.problems.length, "searches-only is not an error");
+  const s = L.summarize(h.searches); ok(s.by.all.count === 2 && s.by.all.topChannels.length > 0, "search summary builds");
+  const code = await L.encodeShare(s.by.all, "search", null); const dec = await L.decodeShare(code); ok(dec.kind === "search" && dec.summary.count === 2, "share round-trips kind");
+  ok(L.cleanStore({ v: 2, data: { watch: null, search: s } }).data.search.by.all.count === 2, "cleanStore v2 search-only");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);
+

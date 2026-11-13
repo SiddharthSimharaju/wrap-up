@@ -5,8 +5,8 @@ Built by [Sid](https://x.com/sidsimharaju).
 Your YouTube year from your own data. Users download their Google Takeout, drop it on the page, and see their top channels, topics, prime time and an estimated rank in India. There is no sign-in, no backend and no network access: the analysis runs in the browser and the page's Content Security Policy (`connect-src 'none'`) forbids sending anything out.
 
 ## How it works
-1. The user exports **History** (as **JSON**) and **Subscriptions** from takeout.google.com. The page walks them through it.
-2. They drop the `.zip` (read in the browser with no library, using the built-in `DecompressionStream`), or the loose `watch-history.json` / `subscriptions.csv`.
+1. The user exports **History** and **Subscriptions** from takeout.google.com (without their uploaded videos, which makes the zip huge). HTML or JSON history both work. The page walks them through it.
+2. They drop the `.zip` (read in the browser with no library, using the built-in `DecompressionStream`), or the loose `watch-history` / `search-history` files (.html or .json) and `subscriptions.csv`. Split exports (-001, -002) can be dropped together. Ad views ("From Google Ads") are skipped. If there's no organic watch history, the wrap is built from searches.
 3. `lib.js` parses it and builds a summary per year. `app.js` renders the dashboard and share cards.
 4. If "Remember my wrap" is ticked, **only the summary** (counts, top channels/topics, heatmap, ten most-watched titles) is saved in `localStorage`. The raw history is never stored. "Forget my data" or clearing site data removes it.
 5. "Copy share link" puts a compressed summary (no video titles) in the URL fragment (`#w=...`), which browsers never send to servers. Anyone with the link sees a read-only view.
@@ -14,7 +14,7 @@ Your YouTube year from your own data. Users download their Google Takeout, drop 
 ## What is real and what is estimated
 Real: watch counts, dates, channels, rewatches, streaks, heatmap, subscriptions count. Estimated (labeled **est.**): topics (keyword rules on titles and channel names, in `lib.js`), hours (Takeout has no durations, so 7 minutes per video), and rank in India (lognormal around a typical yearly viewer derived from public figures: about 2.7B monthly users, 500M in India, 1B hours a day). Edit `BM` in `app.js` and `TOPIC_RULES` / `MIN_PER_VIDEO` in `lib.js` to tune them.
 
-Takeout titles are localized by account language. Parsing keys off the video URL, not the wording, so non-English exports work; only the leading "Watched" word is stripped in English.
+Times are wall-clock values exactly as written in the export (no time-zone shifting). HTML dates are parsed in English formats; other languages should export JSON. Takeout titles are localized by account language. Parsing keys off the video URL, not the wording, so non-English exports work; only the leading "Watched" word is stripped in English.
 
 ## Files
 | File | Purpose |

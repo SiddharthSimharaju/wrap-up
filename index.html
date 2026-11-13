@@ -65,22 +65,22 @@
           <li><b>Open Google Takeout</b><span>Go to <a href="https://takeout.google.com" target="_blank" rel="noopener noreferrer">takeout.google.com</a> and sign in.</span></li>
           <li><b>Pick only YouTube</b><span>Click <em>Deselect all</em>, then tick <em>YouTube and YouTube Music</em>.</span></li>
           <li><b>Choose what to include</b><span>Click <em>All YouTube data included</em>, press <em>Deselect all</em>, then tick <em>history</em> and <em>subscriptions</em>. Press OK.</span></li>
-          <li><b>Switch History to JSON</b><span>Click <em>Multiple formats</em>, change <em>History</em> from HTML to <em>JSON</em>, then OK. This step matters: we can't read the HTML version.</span></li>
+          <li><b>Keep the export small</b><span>Make sure <em>videos</em> (your own uploads) is unticked, or Google splits the export into huge zips. HTML or JSON history both work, so leave the format as is.</span></li>
           <li><b>Create the export</b><span>Click <em>Next step</em>, keep <em>Export once</em> and <em>.zip</em>, then <em>Create export</em>. Google emails you a download link, usually within minutes (sometimes up to a day).</span></li>
-          <li><b>Drop the .zip here</b><span>Download it and drop it in the box. No need to unzip.</span></li>
+          <li><b>Drop the .zip here</b><span>Download it and drop it in the box. No need to unzip. If Google gave you several zips (-001, -002), drop them all at once.</span></li>
         </ol>
         <div>
           <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose or drop your Takeout file">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>
             <b>Drop your Takeout .zip here</b>
             <span>or click to choose a file</span>
-            <small>Works with the .zip as downloaded, or the unzipped watch-history.json (and subscriptions.csv).</small>
-            <input type="file" id="file" multiple accept=".zip,.json,.csv,application/zip,application/json,text/csv" hidden>
+            <small>Works with the .zip as downloaded, or the unzipped watch-history / search-history file (.html or .json) and subscriptions.csv.</small>
+            <input type="file" id="file" multiple accept=".zip,.json,.csv,.html,.htm,application/zip,application/json,text/csv,text/html" hidden>
             <div class="dmsg" id="dropmsg" role="status" aria-live="polite"></div>
           </div>
           <label class="remember"><input type="checkbox" id="remember" checked><span>Remember my wrap in this browser. Only the summary is saved, on this device. Clearing your site data or pressing "Forget my data" removes it.</span></label>
           <div class="hbtns"><button class="btn" id="demo2">Try demo data instead</button><button class="btn" id="back" style="display:none">Back to my wrap</button></div>
-          <p class="fine">Your file is read in your browser and never uploaded. This page isn't allowed to make network requests, which you can check in your browser's developer tools. Watch history must be switched on in your YouTube settings, otherwise the export is empty. Google sometimes rewords these buttons; the file we need is called <code>watch-history.json</code>.</p>
+          <p class="fine">Your file is read in your browser and never uploaded. This page isn't allowed to make network requests, which you can check in your browser's developer tools. Watch history must be switched on in your YouTube settings, otherwise there's nothing to show but your searches. Google sometimes rewords these buttons; the files we use are <code>watch-history</code> and <code>search-history</code> (.html or .json).</p>
         </div>
       </div>
     </section>
